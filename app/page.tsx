@@ -7,33 +7,87 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import { AlertTriangle, CalendarIcon, Droplets, Thermometer } from "lucide-react"
 import { useEffect, useState } from "react"
+import type { SensorConfig, WeatherDataPoint } from "./utils/data-utils"
 import { WeatherChart } from "./weather-chart"
 
 export default function WeatherDashboard() {
-  const sensors = getSensors()
-  const [currentTemp, setCurrentTemp] = useState(23.5)
-  const [currentHumidity, setCurrentHumidity] = useState(46)
+  const [sensors, setSensors] = useState<SensorConfig[]>([])
+  const [currentTemp, setCurrentTemp] = useState<number | null>(null)
+  const [currentHumidity, setCurrentHumidity] = useState<number | null>(null)
   const [alarm, setAlarm] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [selectedSensor, setSelectedSensor] = useState(sensors[0].id)
+  const [selectedSensor, setSelectedSensor] = useState<string>("")
+  const [historicalData, setHistoricalData] = useState<WeatherDataPoint[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Update current readings when sensor changes
+  // Load sensors on initial render
   useEffect(() => {
-    const readings = getCurrentReadings(selectedSensor)
-    setCurrentTemp(readings.temperature)
-    setCurrentHumidity(readings.humidity)
-  }, [selectedSensor])
+    const loadSensors = async () => {
+      try {
+        const sensorList = await getSensors()
+        setSensors(sensorList)
 
-  // Simulate changing values and occasional alarms
+        if (sensorList.length > 0 && !selectedSensor) {
+          setSelectedSensor(sensorList[0].id)
+        }
+
+        setIsLoading(false)
+      } catch (err) {
+        console.error("Failed to load sensors:", err)
+        setError("Failed to load sensors. Please check your connection and try again.")
+        setIsLoading(false)
+      }
+    }
+
+    loadSensors()
+  }, [])
+
+  // Load historical data when date or sensor changes
   useEffect(() => {
+    if (!selectedSensor) return
+
+    const loadHistoricalData = async () => {
+      try {
+        setIsLoading(true)
+        const data = await getHistoricalDataForDate(selectedDate, selectedSensor)
+        setHistoricalData(data)
+        setIsLoading(false)
+      } catch (err) {
+        console.error("Failed to load historical data:", err)
+        setError("Failed to load historical data. Please check your connection and try again.")
+        setIsLoading(false)
+      }
+    }
+
+    loadHistoricalData()
+  }, [selectedDate, selectedSensor])
+
+  // Update current readings when sensor changes and periodically
+  useEffect(() => {
+    if (!selectedSensor) return
+
+    const updateCurrentReadings = async () => {
+      try {
+        const readings = await getCurrentReadings(selectedSensor)
+        setCurrentTemp(readings.temperature)
+        setCurrentHumidity(readings.humidity)
+      } catch (err) {
+        console.error("Failed to load current readings:", err)
+      }
+    }
+
+    // Initial load
+    updateCurrentReadings()
+
+    // Set up interval for updates
     const interval = setInterval(() => {
-      const readings = getCurrentReadings(selectedSensor)
-      setCurrentTemp((prev) => +(prev + (readings.temperature - prev) * 0.2).toFixed(1))
-      setCurrentHumidity((prev) => Math.round(prev + (readings.humidity - prev) * 0.2))
+      updateCurrentReadings()
 
       // Randomly trigger alarm (10% chance)
       if (Math.random() < 0.1) {
@@ -45,6 +99,21 @@ export default function WeatherDashboard() {
 
     return () => clearInterval(interval)
   }, [selectedSensor])
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-8 flex items-center justify-center">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </Alert>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 flex items-center">
@@ -78,6 +147,7 @@ export default function WeatherDashboard() {
                           "w-full justify-start text-left font-normal",
                           !selectedDate && "text-muted-foreground",
                         )}
+                        disabled={isLoading || sensors.length === 0}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
@@ -92,22 +162,35 @@ export default function WeatherDashboard() {
                       />
                     </PopoverContent>
                   </Popover>
-                  <Select value={selectedSensor} onValueChange={setSelectedSensor}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder="Select sensor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sensors.map((sensor) => (
-                        <SelectItem key={sensor.id} value={sensor.id}>
-                          {sensor.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                  {isLoading && sensors.length === 0 ? (
+                    <Skeleton className="h-10 w-[180px]" />
+                  ) : (
+                    <Select value={selectedSensor} onValueChange={setSelectedSensor} disabled={sensors.length === 0}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Select sensor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sensors.map((sensor) => (
+                          <SelectItem key={sensor.id} value={sensor.id}>
+                            {sensor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </CardHeader>
-              <CardContent className="h-[400px] flex justify-center">
-                <WeatherChart data={getHistoricalDataForDate(selectedDate, selectedSensor)} />
+              <CardContent className="h-[400px]">
+                {isLoading ? (
+                  <div className="h-full w-full flex items-center justify-center">
+                    <div className="space-y-4 w-full">
+                      <Skeleton className="h-[320px] w-full rounded-xl" />
+                    </div>
+                  </div>
+                ) : (
+                  <WeatherChart data={historicalData} />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -119,10 +202,14 @@ export default function WeatherDashboard() {
                   <Thermometer className="mr-2 h-5 w-5 text-red-500" />
                   Current Temperature
                 </CardTitle>
-                <CardDescription>{sensors.find((s) => s.id === selectedSensor)?.name}</CardDescription>
+                <CardDescription>{sensors.find((s) => s.id === selectedSensor)?.name || "Loading..."}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{currentTemp}°C</div>
+                {currentTemp === null ? (
+                  <Skeleton className="h-10 w-20" />
+                ) : (
+                  <div className="text-4xl font-bold">{currentTemp}°C</div>
+                )}
                 <p className="text-sm text-muted-foreground mt-2">Updated just now</p>
               </CardContent>
             </Card>
@@ -133,10 +220,14 @@ export default function WeatherDashboard() {
                   <Droplets className="mr-2 h-5 w-5 text-blue-500" />
                   Current Humidity
                 </CardTitle>
-                <CardDescription>{sensors.find((s) => s.id === selectedSensor)?.name}</CardDescription>
+                <CardDescription>{sensors.find((s) => s.id === selectedSensor)?.name || "Loading..."}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold">{currentHumidity}%</div>
+                {currentHumidity === null ? (
+                  <Skeleton className="h-10 w-20" />
+                ) : (
+                  <div className="text-4xl font-bold">{currentHumidity}%</div>
+                )}
                 <p className="text-sm text-muted-foreground mt-2">Updated just now</p>
               </CardContent>
             </Card>
