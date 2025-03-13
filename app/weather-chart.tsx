@@ -2,12 +2,7 @@
 
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-
-interface WeatherDataPoint {
-  time: string
-  temperature: number
-  humidity: number
-}
+import type { WeatherDataPoint } from "./utils/data-utils"
 
 interface WeatherChartProps {
   data: WeatherDataPoint[]
