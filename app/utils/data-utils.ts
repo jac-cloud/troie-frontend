@@ -29,3 +29,4 @@ export const getHistoricalDataForDate = async (date: Date, sensorId: string): Pr
 export const getCurrentReadings = async (sensorId: string): Promise<{ temperature: number; humidity: number }> => {
   return await fetchCurrentReadings(sensorId)
 }
+

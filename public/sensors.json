@@ -1,0 +1,42 @@
+[
+	{
+		"id": "living-room",
+		"name": "Living Room",
+		"baseTemp": 20,
+		"baseHumidity": 45,
+		"tempMultiplier": 1,
+		"humidityMultiplier": 1
+	},
+	{
+		"id": "bedroom",
+		"name": "Bedroom",
+		"baseTemp": 22,
+		"baseHumidity": 40,
+		"tempMultiplier": 1,
+		"humidityMultiplier": 0.9
+	},
+	{
+		"id": "kitchen",
+		"name": "Kitchen",
+		"baseTemp": 23,
+		"baseHumidity": 55,
+		"tempMultiplier": 1.2,
+		"humidityMultiplier": 1.1
+	},
+	{
+		"id": "outdoor",
+		"name": "Outdoor",
+		"baseTemp": 18,
+		"baseHumidity": 60,
+		"tempMultiplier": 1.5,
+		"humidityMultiplier": 1.3
+	},
+	{
+		"id": "basement",
+		"name": "Basement",
+		"baseTemp": 17,
+		"baseHumidity": 70,
+		"tempMultiplier": 0.7,
+		"humidityMultiplier": 1.2
+	}
+]
