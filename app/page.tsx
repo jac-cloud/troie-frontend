@@ -77,6 +77,8 @@ export default function WeatherDashboard() {
         const readings = await getCurrentReadings(selectedSensor)
         setCurrentTemp(readings.temperature)
         setCurrentHumidity(readings.humidity)
+
+        setAlarm(readings.temperature > 20)
       } catch (err) {
         console.error("Failed to load current readings:", err)
         // Don't set error state here to avoid disrupting the UI for temporary failures
@@ -85,20 +87,6 @@ export default function WeatherDashboard() {
 
     // Initial load
     updateCurrentReadings()
-
-    // Set up interval for updates
-    const interval = setInterval(() => {
-      updateCurrentReadings()
-
-      // Randomly trigger alarm (10% chance) - in a real app, this would come from the API
-      if (Math.random() < 0.1) {
-        setAlarm(true)
-        // Auto-clear alarm after 5 seconds
-        setTimeout(() => setAlarm(false), 5000)
-      }
-    }, 3000)
-
-    return () => clearInterval(interval)
   }, [selectedSensor])
 
   // Handle retry
@@ -129,7 +117,7 @@ export default function WeatherDashboard() {
         <h1 className="text-3xl font-bold mb-8">Weather Monitoring Dashboard</h1>
 
         {alarm && (
-          <Alert variant="destructive" className="mb-6 animate-pulse">
+          <Alert variant="destructive" className="mb-6 bg-[antiquewhite] animate-pulse">
             <AlertTriangle className="h-5 w-5" />
             <AlertTitle>Warning!</AlertTitle>
             <AlertDescription>
@@ -257,4 +245,3 @@ export default function WeatherDashboard() {
     </div>
   )
 }
-
