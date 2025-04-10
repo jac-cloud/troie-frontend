@@ -1,18 +1,16 @@
 import { fetchCurrentReadings, fetchHistoricalData, fetchSensors } from "./api"
 
 export interface SensorConfig {
-  id: string
-  name: string
-  baseTemp: number
-  baseHumidity: number
-  tempMultiplier: number
-  humidityMultiplier: number
+  deviceId: string,
+  deviceName?: string
 }
 
-export interface WeatherDataPoint {
-  time: string
+export interface SensorReadings {
+  sensorId: string
   temperature: number
   humidity: number
+  timestamp: string
+  alert: boolean
 }
 
 // Get all available sensors
@@ -21,12 +19,11 @@ export const getSensors = async (): Promise<SensorConfig[]> => {
 }
 
 // Get historical data for a specific date and sensor
-export const getHistoricalDataForDate = async (date: Date, sensorId: string): Promise<WeatherDataPoint[]> => {
+export const getHistoricalDataForDate = async (date: Date, sensorId: string): Promise<SensorReadings[]> => {
   return await fetchHistoricalData(date, sensorId)
 }
 
 // Get current readings for a specific sensor
-export const getCurrentReadings = async (sensorId: string): Promise<{ temperature: number; humidity: number }> => {
+export const getCurrentReadings = async (sensorId: string): Promise<SensorReadings> => {
   return await fetchCurrentReadings(sensorId)
 }
-
