@@ -9,7 +9,7 @@ FROM base AS deps
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+COPY package.json bun.lock* yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
 RUN \
 	if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
 	elif [ -f bun.lock ]; then bun install  --frozen-lockfile; \
